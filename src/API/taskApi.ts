@@ -1,7 +1,6 @@
 import axios from 'axios';
 import { Material } from '../types/material';
-
-const API_URL = 'http://localhost:8080'; // Spring Boot server
+import { API_URL } from '../config';
 
 const api = axios.create({
   baseURL: API_URL,

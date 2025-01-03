@@ -1,7 +1,7 @@
 import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from 'react-query'
-import TaskList from '../../pages/TaskList'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import TasksPage from '../../pages/TasksPage'
 import { getTasks, deleteTask } from '../../API/taskApi'
 
 // Mock the API calls
@@ -44,7 +44,7 @@ describe('TaskList Page', () => {
   const renderTaskList = () => {
     render(
       <QueryClientProvider client={queryClient}>
-        <TaskList />
+        <TasksPage />
       </QueryClientProvider>
     )
   }
