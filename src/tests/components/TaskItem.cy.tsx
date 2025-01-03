@@ -1,60 +1,44 @@
 import React from 'react'
-import TaskItem from '../../components/TaskItem'
+import Task from '../../components/Task'
 import { mount } from '@cypress/react'
 
-describe('TaskItem Component', () => {
+describe('Task Component', () => {
   const mockTask = {
     id: '1',
-    title: 'Test Task',
-    description: 'Test Description',
+    subject: 'Test Task',
+    completed: false,
     userEmail: 'test@example.com',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    createdAt: '2025-01-03T17:32:12Z',
+    updatedAt: '2025-01-03T17:32:12Z'
   }
 
   const mockHandlers = {
-    onEdit: cy.stub().as('editHandler'),
-    onDelete: cy.stub().as('deleteHandler'),
-    onSelect: cy.stub().as('selectHandler')
+    onToggle: cy.spy().as('onToggle'),
+    onDelete: cy.spy().as('onDelete')
   }
 
   beforeEach(() => {
     mount(
-      <TaskItem
+      <Task
         task={mockTask}
-        onEdit={mockHandlers.onEdit}
+        onToggle={mockHandlers.onToggle}
         onDelete={mockHandlers.onDelete}
-        onSelect={mockHandlers.onSelect}
       />
     )
   })
 
-  it('displays task title and description', () => {
-    cy.get('[data-testid="task-title"]').should('contain', mockTask.title)
-    cy.get('[data-testid="task-description"]').should('contain', mockTask.description)
+  it('renders task subject', () => {
+    cy.contains(mockTask.subject)
   })
 
-  it('calls edit handler when edit button is clicked', () => {
-    cy.get('[data-testid="edit-button"]').click()
-    cy.get('@editHandler').should('have.been.calledWith', mockTask)
+  it('handles toggle action', () => {
+    cy.get('input[type="checkbox"]').click()
+    cy.get('@onToggle').should('have.been.calledWith', mockTask.id)
   })
 
-  it('calls delete handler when delete button is clicked', () => {
-    cy.get('[data-testid="delete-button"]').click()
-    cy.get('@deleteHandler').should('have.been.calledWith', mockTask.id)
-  })
-
-  it('calls select handler when task is clicked', () => {
-    cy.get('[data-testid="task-item"]').click()
-    cy.get('@selectHandler').should('have.been.calledWith', mockTask)
-  })
-
-  it('shows task creation date in correct format', () => {
-    cy.get('[data-testid="task-date"]').should('exist')
-    // Verify date format using regex
-    cy.get('[data-testid="task-date"]')
-      .invoke('text')
-      .should('match', /\d{2}\/\d{2}\/\d{4}/)
+  it('handles delete action', () => {
+    cy.get('button[aria-label="delete"]').click()
+    cy.get('@onDelete').should('have.been.calledWith', mockTask.id)
   })
 
   it('displays user email', () => {
@@ -71,5 +55,13 @@ describe('TaskItem Component', () => {
     cy.get('[data-testid="task-item"]')
       .trigger('mouseover')
       .should('have.class', 'hover')
+  })
+
+  it('shows task creation date in correct format', () => {
+    cy.get('[data-testid="task-date"]').should('exist')
+    // Verify date format using regex
+    cy.get('[data-testid="task-date"]')
+      .invoke('text')
+      .should('match', /\d{2}\/\d{2}\/\d{4}/)
   })
 })
