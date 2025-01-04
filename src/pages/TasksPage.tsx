@@ -9,16 +9,13 @@ import {
   Paper,
   Alert,
   Button,
-  Card,
-  CardContent,
-  CardActions,
-  Stack,
   Grid,
+  Stack,
   Snackbar
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
 import MaterialDialog from '../components/MaterialDialog';
+import TaskCard from '../components/TaskCard';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createTask, deleteTask, generateContent } from '../API/taskApi';
 
@@ -91,8 +88,8 @@ const TasksPage: React.FC = () => {
     }
   };
 
-  if (isLoading) return <LoadingSpinner />;
-  
+  if (isLoading) return <CircularProgress />;
+
   if (error) {
     return (
       <Box p={3}>
@@ -144,144 +141,41 @@ const TasksPage: React.FC = () => {
           <Grid container spacing={3}>
             {tasks.map((task) => (
               <Grid item xs={12} sm={6} md={4} key={task.id}>
-                <Card sx={{ 
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  borderRadius: 2,
-                  transition: 'transform 0.2s, box-shadow 0.2s',
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.12)'
-                  }
-                }}>
-                  <CardContent sx={{ flexGrow: 1, p: 3 }}>
-                    <Typography variant="h6" component="h2" gutterBottom sx={{ 
-                      color: '#1a237e',
-                      fontWeight: 600
-                    }}>
-                      {task.subject}
-                    </Typography>
-                    <Stack spacing={1}>
-                      <Typography variant="body2" color="textSecondary">
-                        <strong>Grade:</strong> {task.grade}
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        <strong>Topic:</strong> {task.lessonUnit}
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        <strong>Type:</strong> {task.materialType}
-                      </Typography>
-                    </Stack>
-                    {task.content && (
-                      <Typography 
-                        variant="body1" 
-                        sx={{ 
-                          mt: 2,
-                          p: 2,
-                          bgcolor: 'rgba(0,114,255,0.05)',
-                          borderRadius: 1,
-                          border: '1px solid rgba(0,114,255,0.1)'
-                        }}
-                      >
-                        {task.content}
-                      </Typography>
-                    )}
-                  </CardContent>
-                  <CardActions sx={{ 
-                    p: 2, 
-                    borderTop: '1px solid rgba(0,0,0,0.08)',
-                    bgcolor: 'rgba(0,0,0,0.02)'
-                  }}>
-                    {!task.content && (
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        size="small"
-                        onClick={() => task.id && generateContentMutation.mutate(task.id)}
-                        disabled={generateContentMutation.isLoading}
-                        sx={{
-                          mr: 1,
-                          bgcolor: '#0072ff',
-                          '&:hover': {
-                            bgcolor: '#005bb5',
-                          }
-                        }}
-                      >
-                        Generate Content
-                      </Button>
-                    )}
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      size="small"
-                      startIcon={<DeleteIcon />}
-                      onClick={() => task.id && deleteTaskMutation.mutate(task.id)}
-                      sx={{
-                        borderColor: 'error.main',
-                        '&:hover': {
-                          bgcolor: 'error.main',
-                          color: 'white'
-                        }
-                      }}
-                    >
-                      Delete
-                    </Button>
-                  </CardActions>
-                </Card>
+                <TaskCard
+                  task={task}
+                  onDelete={(taskId) => deleteTaskMutation.mutate(taskId)}
+                  onGenerateContent={(taskId) => generateContentMutation.mutate(taskId)}
+                />
               </Grid>
             ))}
           </Grid>
         ) : (
-          <Paper 
-            elevation={0}
-            sx={{ 
-              p: 4, 
-              textAlign: 'center',
-              bgcolor: 'rgba(0,114,255,0.05)',
-              borderRadius: 2,
-              border: '1px dashed rgba(0,114,255,0.2)'
-            }}
-          >
-            <Typography color="textSecondary">
-              No tasks found. Create one to get started!
-            </Typography>
-          </Paper>
+          <Typography variant="body1" color="textSecondary" align="center">
+            No tasks found. Create one to get started!
+          </Typography>
         )}
-
-        <MaterialDialog
-          open={dialogOpen}
-          onClose={() => setDialogOpen(false)}
-          onSubmit={handleCreateTask}
-          loading={createTaskMutation.isLoading || generateContentMutation.isLoading}
-          userEmail={email}
-        />
-
-        <Snackbar
-          open={!!errorMessage}
-          autoHideDuration={6000}
-          onClose={() => setErrorMessage(null)}
-          message={errorMessage}
-        >
-          <Alert severity="error" onClose={() => setErrorMessage(null)}>
-            {errorMessage}
-          </Alert>
-        </Snackbar>
       </Paper>
+
+      <MaterialDialog
+        open={dialogOpen}
+        onClose={() => {
+          setDialogOpen(false);
+          setErrorMessage(null);
+        }}
+        onSubmit={handleCreateTask}
+      />
+
+      <Snackbar
+        open={!!errorMessage}
+        autoHideDuration={6000}
+        onClose={() => setErrorMessage(null)}
+      >
+        <Alert severity="error" onClose={() => setErrorMessage(null)}>
+          {errorMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
-
-const LoadingSpinner = () => (
-  <Box 
-    display="flex" 
-    justifyContent="center" 
-    alignItems="center" 
-    minHeight="200px"
-    sx={{ color: '#0072ff' }}
-  >
-    <CircularProgress />
-  </Box>
-);
 
 export default TasksPage;
