@@ -1,7 +1,0 @@
-com\example\mywindsurfingapp\model\Material.class
-com\example\mywindsurfingapp\service\MaterialService.class
-com\example\mywindsurfingapp\MyWindsurfingAppApplication.class
-com\example\mywindsurfingapp\MyWindsurfingAppApplication$1.class
-com\example\mywindsurfingapp\repository\MaterialRepository.class
-com\example\mywindsurfingapp\controller\MaterialController.class
-com\example\mywindsurfingapp\config\EnvConfig.class
