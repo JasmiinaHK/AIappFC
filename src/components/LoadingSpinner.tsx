@@ -1,15 +1,23 @@
 import React from 'react';
 import { CircularProgress, Box } from '@mui/material';
 
-const LoadingSpinner: React.FC = () => {
+interface LoadingSpinnerProps {
+  minHeight?: string | number;
+  size?: number;
+}
+
+const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ 
+  minHeight = '200px',
+  size = 40
+}) => {
   return (
     <Box 
       display="flex" 
       justifyContent="center" 
       alignItems="center" 
-      minHeight="200px"
+      minHeight={minHeight}
     >
-      <CircularProgress />
+      <CircularProgress size={size} />
     </Box>
   );
 };

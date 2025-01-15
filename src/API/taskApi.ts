@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { Material } from '../types/material';
 import { API_URL } from '../config';
 
@@ -9,73 +9,79 @@ const api = axios.create({
   }
 });
 
-export const getTasks = async (email: string): Promise<Material[]> => {
-  console.log('Getting tasks for email:', email);
+interface PaginatedResponse<T> {
+  items: T[];
+  totalItems: number;
+  totalPages: number;
+  currentPage: number;
+}
+
+interface APIError {
+  message: string;
+  status: number;
+}
+
+const handleError = (error: unknown): never => {
+  if (axios.isAxiosError(error)) {
+    const axiosError = error as AxiosError<APIError>;
+    if (axiosError.response?.data) {
+      throw new Error(axiosError.response.data.message || 'An error occurred');
+    }
+    throw new Error(axiosError.message);
+  }
+  throw error;
+};
+
+export const getTasks = async (email: string): Promise<PaginatedResponse<Material>> => {
   try {
-    const response = await api.get(`/tasks/user/${email}`);
-    console.log('Tasks received:', response.data);
+    if (!email) {
+      throw new Error('Email is required');
+    }
+    const response = await api.get<PaginatedResponse<Material>>(`/api/materials?userEmail=${encodeURIComponent(email)}`);
     return response.data;
   } catch (error) {
     console.error('Error fetching tasks:', error);
-    if (axios.isAxiosError(error)) {
-      console.error('Response:', error.response?.data);
-      console.error('Status:', error.response?.status);
-    }
-    throw error;
+    return handleError(error);
   }
 };
 
-export const createTask = async (material: Omit<Material, 'id' | 'createdAt' | 'updatedAt'>): Promise<Material> => {
+export const createTask = async (material: Omit<Material, 'id' | 'generatedContent'>): Promise<Material> => {
   try {
-    const response = await api.post('/tasks', material);
+    const response = await api.post<Material>('/api/materials', material);
     return response.data;
   } catch (error) {
     console.error('Error creating task:', error);
-    if (axios.isAxiosError(error)) {
-      console.error('Response:', error.response?.data);
-      console.error('Status:', error.response?.status);
-    }
-    throw error;
-  }
-};
-
-export const generateContent = async (taskId: string): Promise<Material> => {
-  try {
-    const response = await api.post(`/tasks/${taskId}/generate`);
-    return response.data;
-  } catch (error) {
-    console.error('Error generating content:', error);
-    if (axios.isAxiosError(error)) {
-      console.error('Response:', error.response?.data);
-      console.error('Status:', error.response?.status);
-    }
-    throw error;
-  }
-};
-
-export const updateTask = async (taskId: string, updates: Partial<Material>): Promise<Material> => {
-  try {
-    const response = await api.put(`/tasks/${taskId}`, updates);
-    return response.data;
-  } catch (error) {
-    console.error('Error updating task:', error);
-    if (axios.isAxiosError(error)) {
-      console.error('Response:', error.response?.data);
-      console.error('Status:', error.response?.status);
-    }
-    throw error;
+    return handleError(error);
   }
 };
 
 export const deleteTask = async (taskId: string): Promise<void> => {
   try {
-    await api.delete(`/tasks/${taskId}`);
+    await api.delete(`/api/materials/${taskId}`);
   } catch (error) {
     console.error('Error deleting task:', error);
-    if (axios.isAxiosError(error)) {
-      console.error('Response:', error.response?.data);
-      console.error('Status:', error.response?.status);
-    }
-    throw error;
+    return handleError(error);
+  }
+};
+
+export const generateContent = async (taskId: string, userEmail: string, task: Material): Promise<Material> => {
+  try {
+    console.log('Generating content for task:', { taskId, userEmail, task });
+    const response = await api.post<Material>(`/api/materials/${taskId}/generate`, {
+      id: taskId,
+      subject: task.subject,
+      grade: task.grade,
+      lessonUnit: task.lessonUnit,
+      materialType: task.materialType,
+      language: task.language,
+      userEmail: userEmail,
+      createdAt: task.createdAt,
+      updatedAt: new Date().toISOString()
+    });
+    console.log('Generate content response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error generating content:', error);
+    return handleError(error);
   }
 };

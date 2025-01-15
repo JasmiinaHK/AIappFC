@@ -1,0 +1,50 @@
+name: Deploy Backend to Render
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/main/**'
+      - 'pom.xml'
+      - 'backend.Dockerfile'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Render CLI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/render-oss/cli/refs/heads/main/bin/install.sh | sh
+
+      - name: Set Render Workspace
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          render workspace set windsurfing-backend -o json
+
+      - name: Get Commit SHA
+        id: git-info
+        run: echo "commit=$(git rev-parse HEAD)" >> $GITHUB_ENV
+
+      - name: Verify Render CLI Installation
+        run: render --version
+
+      - name: Set Environment Variables for Render Deployment
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          render services update-environment ${{ secrets.RENDER_SERVICE_ID }} \
+          --env-vars "SPRING_DATASOURCE_URL=${{ secrets.DB_URL }}" \
+                     "SPRING_DATASOURCE_USERNAME=${{ secrets.DB_USERNAME }}" \
+                     "SPRING_DATASOURCE_PASSWORD=${{ secrets.DB_PASSWORD }}" \
+                     "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}"
+
+      - name: Deploy to Render
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          render deploys create ${{ secrets.RENDER_SERVICE_ID }} --commit ${{ env.commit }} -o json --confirm

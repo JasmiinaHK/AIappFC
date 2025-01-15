@@ -19,3 +19,4 @@ yarn-error.log*
 
 # Environment variables
 .env
+src/main/resources/application-dev.yml

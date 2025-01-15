@@ -1,180 +1,142 @@
 import React, { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { useTasks } from '../hooks/useTasks';
-import { Material } from '../types/material';
-import { 
-  CircularProgress, 
-  Box, 
-  Typography, 
-  Paper,
-  Alert,
-  Button,
+import {
+  Container,
+  Typography,
   Grid,
-  Stack,
-  Snackbar
+  Button,
+  Box,
+  CircularProgress,
+  Alert
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import MaterialDialog from '../components/MaterialDialog';
-import TaskCard from '../components/TaskCard';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { createTask, deleteTask, generateContent } from '../API/taskApi';
+import { useNavigate } from 'react-router-dom';
+import { MaterialDialog } from '../components/MaterialDialog';
+import { TaskCard } from '../components/TaskCard';
+import { createMaterial, deleteMaterial, generateContent } from '../API/materialApi';
+import { useTasks } from '../hooks/useTasks';
+import { Material } from '../types/material';
 
-const TasksPage: React.FC = () => {
-  const [searchParams] = useSearchParams();
+export const TasksPage: React.FC = () => {
+  const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const email = searchParams.get('email') || '';
-  const { data: tasks, isLoading, error } = useTasks(email);
-  const queryClient = useQueryClient();
+  const [generatingId, setGeneratingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  
+  const email = localStorage.getItem('email');
+  const { data, isLoading, isError, refetch } = useTasks(email);
+  const materials = data?.content || [];
 
-  const createTaskMutation = useMutation(
-    (material: Omit<Material, 'id' | 'createdAt' | 'updatedAt'>) =>
-      createTask(material),
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries(['tasks', email]);
-        setDialogOpen(false);
-        setErrorMessage(null);
-      },
-      onError: (error) => {
-        console.error('Error creating task:', error);
-        if (error instanceof Error) {
-          setErrorMessage(error.message);
-        } else {
-          setErrorMessage('Failed to create task');
-        }
-      }
-    }
-  );
+  if (!email) {
+    navigate('/login');
+    return null;
+  }
 
-  const deleteTaskMutation = useMutation(
-    (taskId: string) => deleteTask(taskId),
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries(['tasks', email]);
-      }
-    }
-  );
-
-  const generateContentMutation = useMutation(
-    (taskId: string) => generateContent(taskId),
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries(['tasks', email]);
-      }
-    }
-  );
-
-  const handleCreateTask = async (material: Omit<Material, 'id' | 'createdAt' | 'updatedAt'>, generateNow: boolean) => {
+  const handleCreate = async (material: Omit<Material, 'id' | 'generatedContent'>) => {
     try {
-      console.log('Creating task with data:', material);
-      const task = await createTaskMutation.mutateAsync({
-        ...material,
-        userEmail: email
-      });
-      console.log('Task created:', task);
-      
-      if (generateNow && task.id) {
-        console.log('Generating content for task:', task.id);
-        await generateContentMutation.mutateAsync(task.id);
-      }
-    } catch (error) {
-      console.error('Error in handleCreateTask:', error);
-      if (error instanceof Error) {
-        setErrorMessage(error.message);
-      } else {
-        setErrorMessage('Failed to create task');
-      }
+      setError(null);
+      await createMaterial(material);
+      setDialogOpen(false);
+    } catch (err) {
+      console.error('Error creating material:', err);
+      setError('Failed to create material');
     }
   };
 
-  if (isLoading) return <CircularProgress />;
+  const handleDelete = async (id: number) => {
+    if (!id || !email) return;
+    try {
+      setError(null);
+      setDeletingId(id);
+      await deleteMaterial(id, email);
+      await refetch();
+    } catch (error) {
+      console.error('Error deleting material:', error);
+      setError('Failed to delete material');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
-  if (error) {
-    return (
-      <Box p={3}>
-        <Alert severity="error">
-          Error loading tasks: {error instanceof Error ? error.message : 'Unknown error'}
-        </Alert>
-      </Box>
-    );
-  }
+  const handleGenerate = async (id: number) => {
+    try {
+      setError(null);
+      setGeneratingId(id);
+      const material = materials.find(m => m.id === id);
+      if (!material) {
+        throw new Error('Material not found');
+      }
+      await generateContent(id, material);
+      // Refresh the tasks list after successful generation
+      await refetch();
+    } catch (err: any) {
+      console.error('Error generating content:', err);
+      setError(err.message || 'Failed to generate content');
+    } finally {
+      setGeneratingId(null);
+    }
+  };
 
   return (
-    <Box sx={{ 
-      minHeight: '100vh', 
-      background: 'linear-gradient(135deg, #00c6ff 0%, #0072ff 100%)',
-      p: 3
-    }}>
-      <Paper elevation={3} sx={{ 
-        p: 3, 
-        borderRadius: 2,
-        backgroundColor: 'rgba(255, 255, 255, 0.95)'
-      }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
-          <Typography variant="h4" component="h1" sx={{ 
-            color: '#1a237e',
-            fontWeight: 700,
-            textShadow: '1px 1px 1px rgba(0,0,0,0.1)'
-          }}>
-            {email ? `${email.split('@')[0]}'s Tasks` : 'Tasks'}
-          </Typography>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={() => setDialogOpen(true)}
-            sx={{
-              bgcolor: '#0072ff',
-              '&:hover': {
-                bgcolor: '#005bb5',
-              },
-              borderRadius: 2,
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-            }}
-          >
-            Create Task
-          </Button>
-        </Stack>
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h4" component="h1">
+          {email ? `${email.split('@')[0]}'s Materials` : 'My Materials'}
+        </Typography>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => setDialogOpen(true)}
+        >
+          Create Material
+        </Button>
+      </Box>
 
-        {tasks && tasks.length > 0 ? (
-          <Grid container spacing={3}>
-            {tasks.map((task) => (
-              <Grid item xs={12} sm={6} md={4} key={task.id}>
-                <TaskCard
-                  task={task}
-                  onDelete={(taskId) => deleteTaskMutation.mutate(taskId)}
-                  onGenerateContent={(taskId) => generateContentMutation.mutate(taskId)}
-                />
-              </Grid>
-            ))}
-          </Grid>
-        ) : (
-          <Typography variant="body1" color="textSecondary" align="center">
-            No tasks found. Create one to get started!
-          </Typography>
-        )}
-      </Paper>
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
+      {isError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          Failed to load materials
+        </Alert>
+      )}
+
+      {isLoading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <Grid container spacing={3}>
+          {materials.map((material) => (
+            <Grid item xs={12} sm={6} md={4} key={material.id}>
+              <TaskCard
+                material={material}
+                onDelete={() => material.id && handleDelete(material.id)}
+                onGenerate={() => material.id && handleGenerate(material.id)}
+                generating={material.id === generatingId}
+                deleting={material.id === deletingId}
+              />
+            </Grid>
+          ))}
+          {materials.length === 0 && (
+            <Grid item xs={12}>
+              <Typography variant="body1" color="text.secondary" textAlign="center" py={4}>
+                No materials found. Create your first material!
+              </Typography>
+            </Grid>
+          )}
+        </Grid>
+      )}
 
       <MaterialDialog
         open={dialogOpen}
-        onClose={() => {
-          setDialogOpen(false);
-          setErrorMessage(null);
-        }}
-        onSubmit={handleCreateTask}
+        onClose={() => setDialogOpen(false)}
+        onSubmit={handleCreate}
       />
-
-      <Snackbar
-        open={!!errorMessage}
-        autoHideDuration={6000}
-        onClose={() => setErrorMessage(null)}
-      >
-        <Alert severity="error" onClose={() => setErrorMessage(null)}>
-          {errorMessage}
-        </Alert>
-      </Snackbar>
-    </Box>
+    </Container>
   );
 };
 

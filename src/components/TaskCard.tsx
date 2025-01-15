@@ -5,97 +5,107 @@ import {
   CardActions,
   Typography,
   Button,
-  Stack
+  Box,
+  CircularProgress
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import { Material } from '../types/material';
 
 interface TaskCardProps {
-  task: Material;
-  onDelete: (taskId: string) => void;
-  onGenerateContent: (taskId: string) => void;
+  material: Material;
+  onDelete: () => void;
+  onGenerate: () => void;
+  generating: boolean;
+  deleting: boolean;
 }
 
-const TaskCard: React.FC<TaskCardProps> = ({ task, onDelete, onGenerateContent }) => {
+export const TaskCard: React.FC<TaskCardProps> = ({
+  material,
+  onDelete,
+  onGenerate,
+  generating,
+  deleting
+}) => {
+  const handleDelete = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!material.id) {
+      console.error('Cannot delete material without id');
+      return;
+    }
+    if (window.confirm('Are you sure you want to delete this material?')) {
+      onDelete();
+    }
+  };
+
+  const handleGenerate = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!material.id) {
+      console.error('Cannot generate content for material without id');
+      return;
+    }
+    onGenerate();
+  };
+
   return (
-    <Card sx={{ 
-      height: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      borderRadius: 2,
-      transition: 'transform 0.2s, box-shadow 0.2s',
-      '&:hover': {
-        transform: 'translateY(-4px)',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.12)'
-      }
-    }}>
-      <CardContent sx={{ flexGrow: 1, p: 3 }}>
-        <Typography variant="h6" component="h2" gutterBottom sx={{ 
-          color: '#1a237e',
-          fontWeight: 600
-        }}>
-          {task.subject}
+    <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <CardContent sx={{ flexGrow: 1 }}>
+        <Typography variant="h6" gutterBottom>
+          {material.subject}
         </Typography>
-        <Stack spacing={1}>
-          <Typography variant="body2" color="textSecondary">
-            <strong>Grade:</strong> {task.grade}
-          </Typography>
-          <Typography variant="body2" color="textSecondary">
-            <strong>Topic:</strong> {task.lessonUnit}
-          </Typography>
-          <Typography variant="body2" color="textSecondary">
-            <strong>Type:</strong> {task.materialType}
-          </Typography>
-        </Stack>
-        {task.content && (
+        <Typography color="text.secondary" gutterBottom>
+          Grade: {material.grade}
+        </Typography>
+        <Typography color="text.secondary" gutterBottom>
+          Unit: {material.lessonUnit}
+        </Typography>
+        <Typography color="text.secondary" gutterBottom>
+          Type: {material.materialType}
+        </Typography>
+        {material.generatedContent ? (
           <Typography 
-            variant="body1" 
+            variant="body2" 
             sx={{ 
               mt: 2,
-              p: 2,
-              bgcolor: 'rgba(0,114,255,0.05)',
-              borderRadius: 1,
-              border: '1px solid rgba(0,114,255,0.1)'
+              maxHeight: 150,
+              overflow: 'auto',
+              whiteSpace: 'pre-wrap'
             }}
           >
-            {task.content}
+            {material.generatedContent}
+          </Typography>
+        ) : (
+          <Typography 
+            variant="body2" 
+            color="text.secondary"
+            sx={{ mt: 2 }}
+          >
+            No content generated yet. Click "Generate" to create content.
           </Typography>
         )}
       </CardContent>
-      <CardActions sx={{ 
-        p: 2, 
-        borderTop: '1px solid rgba(0,0,0,0.08)',
-        bgcolor: 'rgba(0,0,0,0.02)'
-      }}>
-        {!task.content && (
+      <CardActions>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
           <Button
-            variant="contained"
-            color="primary"
             size="small"
-            onClick={() => task.id && onGenerateContent(task.id)}
-            sx={{
-              bgcolor: '#0072ff',
-              '&:hover': {
-                bgcolor: '#005bb5'
-              }
-            }}
+            color="error"
+            startIcon={deleting ? <CircularProgress size={20} color="error" /> : <DeleteIcon />}
+            onClick={handleDelete}
+            disabled={deleting || !material.id}
           >
-            Generate Content
+            {deleting ? 'Deleting...' : 'Delete'}
           </Button>
-        )}
-        <Button
-          variant="outlined"
-          color="error"
-          size="small"
-          startIcon={<DeleteIcon />}
-          onClick={() => task.id && onDelete(task.id)}
-          sx={{ ml: 'auto' }}
-        >
-          Delete
-        </Button>
+          <Button
+            size="small"
+            color="primary"
+            startIcon={generating ? <CircularProgress size={20} /> : <AutoFixHighIcon />}
+            onClick={handleGenerate}
+            disabled={generating || !material.id}
+          >
+            {generating ? 'Generating...' : 'Generate'}
+          </Button>
+        </Box>
       </CardActions>
     </Card>
   );
 };
-
-export default TaskCard;

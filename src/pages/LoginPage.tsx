@@ -6,16 +6,34 @@ import {
   TextField, 
   Button, 
   Typography,
-  Paper
+  Paper,
+  Alert
 } from '@mui/material';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const handleLogin = () => {
-    if (email.trim()) {
-      navigate(`/tasks?email=${encodeURIComponent(email)}`);
+  const handleLogin = async () => {
+    if (!email.trim()) {
+      setError('Please enter your email');
+      return;
+    }
+
+    try {
+      // Store email in localStorage
+      localStorage.setItem('email', email.trim());
+      navigate('/materials');
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('Invalid email. Please try again.');
+    }
+  };
+
+  const handleKeyPress = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter') {
+      handleLogin();
     }
   };
 
@@ -23,37 +41,44 @@ const LoginPage: React.FC = () => {
     <Container maxWidth="sm">
       <Box
         sx={{
-          marginTop: 8,
+          minHeight: '100vh',
           display: 'flex',
-          flexDirection: 'column',
           alignItems: 'center',
+          justifyContent: 'center'
         }}
       >
         <Paper 
           elevation={3}
           sx={{
-            padding: 4,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 3,
-            width: '100%'
+            p: 4,
+            width: '100%',
+            maxWidth: 800
           }}
         >
-          <Typography component="h1" variant="h4">
-            Login
+          <Typography variant="h4" component="h1" gutterBottom align="center">
+          Welcome to the Teacher Site
           </Typography>
+          
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+
           <TextField
             fullWidth
-            type="email"
             label="Email"
+            variant="outlined"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            variant="outlined"
+            onKeyPress={handleKeyPress}
+            sx={{ mb: 2 }}
           />
+
           <Button
             fullWidth
             variant="contained"
+            color="primary"
             onClick={handleLogin}
             size="large"
           >
